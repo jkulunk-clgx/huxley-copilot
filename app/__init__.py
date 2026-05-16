@@ -9,7 +9,10 @@ from google import genai
 RAG_REGISTRY = {
     "default": "rag_data/registry.md",
     "system_instructions": "rag_data/system_instructions.md",
-    "data": "rag_data/data.md"
+    "persona_format": "rag_data/persona_format.md",
+    "JTBD_format": "rag_data/JTBD_format.md",
+    "journey_map_format": "rag_data/journey_map_format.md",
+    "data": "rag_data/Data-Real-Estate-Agent-001.md"
 }
 
 def create_app():

@@ -8,8 +8,6 @@
 
 |**Document ID**|**Title**|**Persona**|**Date Processed**|**Status**|
 |---|---|---|---|---|
-|**DOC-INT-RAG-001**|User Interview Insights - Jerry|Real Estate Agent|2026-04-21|Active|
-|**DOC-INT-RAG-002**|User Interview Insights - Angie|Mortgage Lender|2026-04-21|Active|
 
 ---
 
