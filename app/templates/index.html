@@ -686,13 +686,37 @@
             // Scroll to bottom of chat
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
-            // 3. Perform async fetch
-            fetch('/', {
+            // 3. Perform Phase 1: Intent Check
+            fetch('/check_intent', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ user_input: userInput })
+            })
+            .then(response => response.json())
+            .then(intentData => {
+                if (intentData.error_message) {
+                    throw new Error(intentData.error_message);
+                }
+                
+                // If the backend plans to process raw data, notify the user immediately
+                if (intentData.notification) {
+                    const notifMsg = document.createElement('div');
+                    notifMsg.className = 'ai-message';
+                    notifMsg.innerHTML = `<em>🛠️ ${intentData.notification}</em>`;
+                    chatMessages.appendChild(notifMsg);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+                
+                // 4. Perform Phase 2 & 3: Generation
+                return fetch('/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ user_input: userInput, role: intentData.role })
+                });
             })
             .then(response => response.json())
             .then(data => {
@@ -714,6 +738,13 @@
                     document.getElementById('persona-canvas').style.display = 'block';
                     
                     // Add AI confirmation to chat
+                    if (data.notification) {
+                        const notifMsg = document.createElement('div');
+                        notifMsg.className = 'ai-message';
+                        notifMsg.innerHTML = `<em>🛠️ ${data.notification}</em>`;
+                        chatMessages.appendChild(notifMsg);
+                    }
+                    
                     const aiMsg = document.createElement('div');
                     aiMsg.className = 'ai-message';
                     aiMsg.innerHTML = `✨ Content generated! You can view it in the canvas on the right. Use the <strong>Copy</strong> or <strong>Download</strong> buttons to save it.`;
@@ -739,7 +770,7 @@
                 canvasPanel.classList.remove('active');
                 const errorMsg = document.createElement('div');
                 errorMsg.className = 'error-block';
-                errorMsg.innerHTML = `<strong>Error:</strong> Request failed. ${err}`;
+                errorMsg.innerHTML = `<strong>Error:</strong> ${err.message || 'An unexpected error occurred.'}`;
                 chatMessages.appendChild(errorMsg);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             });
