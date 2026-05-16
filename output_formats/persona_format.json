@@ -1,0 +1,28 @@
+{
+  "persona": {
+    "name": "[Fictitious Name]",
+    "job_title": "[Job Title]",
+    "who_they_are": {
+      "role": "[Describe their professional role. *Blend source text with industry standards.*]",
+      "demographics": "[Age, location, company type. *Hypothesized based on context.*]",
+      "current_environment": "[Tools and setting. *Hypothesized based on context.*]"
+    },
+    "goals_and_motivations": {
+      "key_goals": [
+        "[Primary professional goals. *Anchor heavily in source text if available.*]"
+      ],
+      "motivations": [
+        "[What drives them? *Hypothesized based on context.*]"
+      ]
+    },
+    "pain_points_and_frustrations": {
+      "stated_challenges": [
+        "[Detail the specific problems explicitly mentioned in the source text.]"
+      ],
+      "implied_frustrations": [
+        "[What makes their work difficult based on typical industry friction? *Hypothesized.*]"
+      ]
+    },
+    "quote": "[A synthetic quote summarizing their experience, matching the tone of the raw data.]"
+  }
+}

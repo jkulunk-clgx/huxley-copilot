@@ -1,0 +1,44 @@
+{
+  "user_journey_map": {
+    "target_user_role": "[Target User/Role]",
+    "scenario": "[Brief description of the scenario or goal being mapped]",
+    "stages": [
+      {
+        "stage_name": "[Stage Name, e.g., Discovery]",
+        "user_actions": [
+          "[What the user is doing]"
+        ],
+        "thoughts": [
+          "[What the user is thinking, e.g., \"Where do I find this?\"]"
+        ],
+        "emotions_and_pain_points": [
+          "[How they feel, and specific frustrations encountered]"
+        ]
+      },
+      {
+        "stage_name": "[Stage Name, e.g., Evaluation]",
+        "user_actions": [
+          "[What the user is doing]"
+        ],
+        "thoughts": [
+          "[What the user is thinking]"
+        ],
+        "emotions_and_pain_points": [
+          "[How they feel, and specific frustrations encountered]"
+        ]
+      },
+      {
+        "stage_name": "[Stage Name, e.g., Usage]",
+        "user_actions": [
+          "[What the user is doing]"
+        ],
+        "thoughts": [
+          "[What the user is thinking]"
+        ],
+        "emotions_and_pain_points": [
+          "[How they feel, and specific frustrations encountered]"
+        ]
+      }
+    ]
+  }
+}

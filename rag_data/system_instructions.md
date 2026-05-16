@@ -20,18 +20,18 @@ Depending on the user's request, follow the specific instructions below and use 
 ## 1. Persona Generation
 
 Create a detailed Persona for a specific target user group provided by the user. Give the persona a realistic (but fictitious) name and specific job title. Do not use names of actual people from the source text. Craft a short, memorable quote that captures the essence of their core problem.
-Use the exact output format defined in the `persona_format` document.
+The structural schema is defined in the `persona_format.json` document. You MUST output your response as well-formatted Markdown that logically follows this schema. Do NOT output raw JSON.
 
 ---
 
 ## 2. Jobs to be Done (JTBD) Generation
 
 Identify the core "jobs" the target user is trying to accomplish. Break down the job into its functional, emotional, and social components, and identify the trigger context.
-Use the exact output format defined in the `JTBD_format` document.
+The structural schema is defined in the `JTBD_format.json` document. You MUST output your response as well-formatted Markdown that logically follows this schema. Do NOT output raw JSON.
 
 ---
 
 ## 3. Journey Map Generation
 
 Map the user's experience over time as they attempt to accomplish a specific goal or scenario. Break the journey down into logical chronological stages (e.g., Discovery, Evaluation, Usage, Support).
-Use the exact output format defined in the `journey_map_format` document.
+The structural schema is defined in the `journey_map_format.json` document. You MUST output your response as well-formatted Markdown that logically follows this schema. Do NOT output raw JSON.

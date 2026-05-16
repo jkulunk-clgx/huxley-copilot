@@ -1,0 +1,18 @@
+{
+  "jobs_to_be_done": {
+    "target_user_role": "[Target User/Role]",
+    "core_job": "[The main high-level task or goal the user is trying to achieve]",
+    "context_trigger": "[The situation, event, or condition that prompts the need to get this job done]",
+    "functional_needs": [
+      "[Specific functional requirement 1]",
+      "[Specific functional requirement 2]"
+    ],
+    "emotional_needs": [
+      "[How the user wants to feel while doing the job or after completing it]"
+    ],
+    "social_needs": [
+      "[How the user wants to be perceived by others]"
+    ],
+    "desired_outcome": "[The ultimate successful result they are aiming for]"
+  }
+}

@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 from google import genai
 
@@ -9,9 +9,9 @@ from google import genai
 RAG_REGISTRY = {
     "default": "rag_data/registry.md",
     "system_instructions": "rag_data/system_instructions.md",
-    "persona_format": "rag_data/persona_format.md",
-    "JTBD_format": "rag_data/JTBD_format.md",
-    "journey_map_format": "rag_data/journey_map_format.md",
+    "persona_format": "output_formats/persona_format.json",
+    "JTBD_format": "output_formats/JTBD_format.json",
+    "journey_map_format": "output_formats/journey_map_format.json",
     "data": "rag_data/Data-Real-Estate-Agent-001.md"
 }
 
@@ -38,7 +38,10 @@ def create_app():
         user_input = None
 
         if request.method == 'POST':
-            user_input = request.form.get('user_input')
+            if request.is_json:
+                user_input = request.json.get('user_input')
+            else:
+                user_input = request.form.get('user_input')
             
             # Load env here in case they added the key after starting the server
             load_dotenv()
@@ -77,6 +80,9 @@ def create_app():
                         print(f"Output Token Count: {response.usage_metadata.candidates_token_count}")
                 except Exception as e:
                     error_message = f"An error occurred: {str(e)}"
+
+            if request.is_json:
+                return jsonify({'ai_response': ai_response, 'error_message': error_message})
 
         return render_template('index.html', ai_response=ai_response, error_message=error_message, user_input=user_input)
 
