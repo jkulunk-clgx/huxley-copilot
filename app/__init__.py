@@ -52,7 +52,7 @@ def create_app():
                         if os.path.exists(expected_raw_file):
                             notification_message = f"I noticed we don't have structured data on {role.replace('_', ' ').title()}. I will now process the raw transcript and add it to our knowledge base. This may take a moment..."
                         else:
-                            notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. I will generate a synthetic knowledge base using AI training data before proceeding. Please note this data is unvalidated."
+                            notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. I will perform a web-lookup to gather up-to-date information before proceeding."
             except Exception as e:
                 error_message = f"An error occurred: {str(e)}"
                 
@@ -124,13 +124,14 @@ def create_app():
                                 with open("rag_data/registry.md", 'r', encoding='utf-8') as f:
                                     registry_content = f.read()
                                     
-                                synthetic_prompt = f"Using your internal training data, create highly detailed, realistic user interview insights for a '{role.replace('_', ' ')}'. You MUST strictly follow the exact Markdown template and schema provided below. Do not output anything outside the schema.\n\nHere is the schema:\n\n{registry_content}"
+                                synthetic_prompt = f"Perform a web-lookup to search for up-to-date information and industry insights regarding the role of a '{role.replace('_', ' ')}'. Using the results of this web-lookup, create highly detailed, realistic user interview insights. You MUST strictly follow the exact Markdown template and schema provided below. Do not output anything outside the schema.\n\nHere is the schema:\n\n{registry_content}"
                                 processed_response = client.models.generate_content(
                                     model='gemini-3-flash-preview',
-                                    contents=synthetic_prompt
+                                    contents=synthetic_prompt,
+                                    config={"tools": [{"google_search": {}}]}
                                 )
                                 
-                                warning_banner = "> [!WARNING]\n> **UNVALIDATED SYNTHETIC DATA**\n> This knowledge base was generated from AI training data because no raw interview transcripts were found for this role.\n\n"
+                                warning_banner = "> [!WARNING]\n> ⚠️ **NOT VALIDATED WEB SEARCH DATA** ⚠️\n> This knowledge base was generated using up-to-date web-lookup data because no raw interview transcripts were found for this role. It is NOT VALIDATED.\n\n"
                                 
                                 with open(expected_rag_file, 'w', encoding='utf-8') as f:
                                     f.write(warning_banner + processed_response.text)
@@ -157,7 +158,8 @@ def create_app():
 
                     response = client.models.generate_content(
                         model='gemini-3-flash-preview',
-                        contents=combined_prompt
+                        contents=combined_prompt,
+                        config={"tools": [{"google_search": {}}]}
                     )
                     ai_response = response.text
                     
