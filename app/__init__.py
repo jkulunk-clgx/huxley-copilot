@@ -35,6 +35,8 @@ def create_app():
                             notification_message = f"I noticed we don't have structured data on {role.replace('_', ' ').title()}. I will now process the raw transcript and add it to our knowledge base. This may take a moment..."
                         else:
                             notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. I will perform a web-lookup to gather up-to-date information before proceeding."
+                    else:
+                        notification_message = f"I am referencing the existing data for {role.replace('_', ' ').title()} to generate this artifact."
             except Exception as e:
                 error_message = f"An error occurred: {str(e)}"
                 

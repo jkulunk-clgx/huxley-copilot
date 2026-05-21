@@ -84,6 +84,8 @@ def generate_ai_response(user_input, role=None, api_key=None):
                     
                     with open(expected_rag_file, 'w', encoding='utf-8') as f:
                         f.write(warning_banner + processed_response.text)
+            else:
+                notification_message = f"I am referencing the existing data for {role.replace('_', ' ').title()} to generate this artifact."
 
         # Phase 3: Artifact Generation & Fulfillment
         rag_contexts = []
