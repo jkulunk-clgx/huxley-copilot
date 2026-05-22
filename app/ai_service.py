@@ -25,21 +25,22 @@ def extract_role_from_input(user_input, api_key):
         print(f"Error extracting role: {e}")
         return "none"
 
-def generate_ai_response(user_input, role=None, api_key=None):
+def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=False):
     """
     Core logic for generating AI response. 
     Handles intent extraction, raw data ingestion, and artifact generation.
-    Returns: (ai_response, notification_message, error_message)
+    Returns: (ai_response, notification_message, error_message, needs_web_search_permission)
     """
     ai_response = None
     notification_message = None
     error_message = None
+    needs_web_search_permission = False
 
     if not api_key or api_key == "your_api_key_here":
-        return None, None, "Gemini API key is missing. Please set it in the .env file."
+        return None, None, "Gemini API key is missing. Please set it in the .env file.", False
 
     if not user_input:
-        return None, None, "User input is required."
+        return None, None, "User input is required.", False
 
     try:
         client = genai.Client(api_key=api_key)
@@ -69,6 +70,11 @@ def generate_ai_response(user_input, role=None, api_key=None):
                     with open(expected_rag_file, 'w', encoding='utf-8') as f:
                         f.write(processed_response.text)
                 else:
+                    if not allow_web_search:
+                        needs_web_search_permission = True
+                        notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. Should I proceed with an internet search? Please note that any data returned will not be validated. Reply 'yes' to proceed."
+                        return ai_response, notification_message, error_message, needs_web_search_permission
+
                     notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. I will perform a web-lookup to gather up-to-date information before proceeding."
                     with open("rag_data/registry.md", 'r', encoding='utf-8') as f:
                         registry_content = f.read()
@@ -120,4 +126,4 @@ def generate_ai_response(user_input, role=None, api_key=None):
     except Exception as e:
         error_message = f"An error occurred: {str(e)}"
 
-    return ai_response, notification_message, error_message
+    return ai_response, notification_message, error_message, needs_web_search_permission

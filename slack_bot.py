@@ -41,18 +41,38 @@ def handle_message_events(body, say, client):
         
         process_message(user_input, user, channel_id, ts, client, say)
 
+pending_confirmations = {}
+
 def process_message(user_input, user, channel_id, ts, client, say):
-    say(text=f"Hi <@{user}>, I'm thinking about that...", thread_ts=ts)
+    global pending_confirmations
+    state_key = f"{channel_id}_{user}"
     
-    api_key = os.environ.get("GEMINI_API_KEY")
-    ai_response, notification_message, error_message = generate_ai_response(user_input, api_key=api_key)
+    if state_key in pending_confirmations:
+        if user_input.lower().strip() in ["yes", "proceed", "y", "sure", "ok", "yeah"]:
+            original_input = pending_confirmations[state_key]
+            del pending_confirmations[state_key]
+            say(text=f"Hi <@{user}>, proceeding with the web search...", thread_ts=ts)
+            api_key = os.environ.get("GEMINI_API_KEY")
+            ai_response, notification_message, error_message, _ = generate_ai_response(original_input, api_key=api_key, allow_web_search=True)
+        else:
+            del pending_confirmations[state_key]
+            say(text=f"Okay, request cancelled.", thread_ts=ts)
+            return
+    else:
+        say(text=f"Hi <@{user}>, I'm thinking about that...", thread_ts=ts)
+        
+        api_key = os.environ.get("GEMINI_API_KEY")
+        ai_response, notification_message, error_message, needs_permission = generate_ai_response(user_input, api_key=api_key, allow_web_search=False)
+        
+        if needs_permission:
+            pending_confirmations[state_key] = user_input
     
     if error_message:
         say(text=f"Sorry, I ran into an error: {error_message}", thread_ts=ts)
         return
         
     if notification_message:
-        say(text=f"Note: {notification_message}", thread_ts=ts)
+        say(text=f"{notification_message}", thread_ts=ts)
         
     if ai_response:
         # Create a temporary markdown file to upload

@@ -18,6 +18,7 @@ def create_app():
         notification_message = None
         role = None
         error_message = None
+        needs_web_search_permission = False
         
         load_dotenv()
         api_key = os.environ.get("GEMINI_API_KEY")
@@ -34,13 +35,14 @@ def create_app():
                         if os.path.exists(expected_raw_file):
                             notification_message = f"I noticed we don't have structured data on {role.replace('_', ' ').title()}. I will now process the raw transcript and add it to our knowledge base. This may take a moment..."
                         else:
-                            notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. I will perform a web-lookup to gather up-to-date information before proceeding."
+                            needs_web_search_permission = True
+                            notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. Should I proceed with an internet search? Please note that any data returned will not be validated. Reply 'yes' to proceed."
                     else:
                         notification_message = f"I am referencing the existing data for {role.replace('_', ' ').title()} to generate this artifact."
             except Exception as e:
                 error_message = f"An error occurred: {str(e)}"
                 
-        return jsonify({'role': role, 'notification': notification_message, 'error_message': error_message})
+        return jsonify({'role': role, 'notification': notification_message, 'error_message': error_message, 'needs_web_search_permission': needs_web_search_permission})
 
     @app.route('/', methods=['GET', 'POST'])
     def index():
@@ -57,10 +59,13 @@ def create_app():
         notification_message = None
 
         if request.method == 'POST':
+            allow_web_search = False
             if request.is_json:
                 user_input = request.json.get('user_input')
+                allow_web_search = request.json.get('allow_web_search', False)
             else:
                 user_input = request.form.get('user_input')
+                allow_web_search = request.form.get('allow_web_search', False)
             
             # Load env here in case they added the key after starting the server
             load_dotenv()
@@ -72,7 +77,7 @@ def create_app():
                 role = None
                 if request.is_json:
                     role = request.json.get('role')
-                ai_response, notification_message, error_message = generate_ai_response(user_input, role, api_key)
+                ai_response, notification_message, error_message, _ = generate_ai_response(user_input, role, api_key, allow_web_search=allow_web_search)
 
             if request.is_json:
                 return jsonify({'ai_response': ai_response, 'error_message': error_message, 'notification': notification_message})
