@@ -1,4 +1,5 @@
 import os
+import glob
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 from app.ai_service import generate_ai_response, extract_role_from_input
@@ -29,8 +30,14 @@ def create_app():
                 role = extract_role_from_input(user_input, api_key)
                 
                 if role and role != "none":
-                    expected_rag_file = f"rag_data/Data-{role.replace('_', '-')}.md"
-                    if not os.path.exists(expected_rag_file):
+                    search_pattern = role.replace("_", "-").lower()
+                    found_rag_file = None
+                    for file_path in glob.glob("rag_data/Data-*.md"):
+                        if search_pattern in os.path.basename(file_path).lower():
+                            found_rag_file = file_path
+                            break
+                            
+                    if not found_rag_file:
                         expected_raw_file = f"raw_data/transcript_{role}.md"
                         if os.path.exists(expected_raw_file):
                             notification_message = f"I noticed we don't have structured data on {role.replace('_', ' ').title()}. I will now process the raw transcript and add it to our knowledge base. This may take a moment..."

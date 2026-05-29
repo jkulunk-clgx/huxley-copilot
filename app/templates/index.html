@@ -683,7 +683,7 @@
                     
                     const notifMsg = document.createElement('div');
                     notifMsg.className = 'ai-message';
-                    notifMsg.innerHTML = `<em>🛠️ Proceeding with web search...</em>`;
+                    notifMsg.innerHTML = `<em>🤖 Proceeding with web search...</em>`;
                     chatMessages.appendChild(notifMsg);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -741,7 +741,7 @@
                 if (intentData.notification) {
                     const notifMsg = document.createElement('div');
                     notifMsg.className = 'ai-message';
-                    notifMsg.innerHTML = `<em>🛠️ ${intentData.notification}</em>`;
+                    notifMsg.innerHTML = `<em>🤖 ${intentData.notification}</em>`;
                     chatMessages.appendChild(notifMsg);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 }
@@ -776,8 +776,14 @@
         });
 
         function handleGenerationFetch(fetchPromise) {
+            const chatMessages = document.getElementById('chat-messages');
             fetchPromise
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 // Hide loading state
                 document.getElementById('loading-state').style.display = 'none';
@@ -800,13 +806,13 @@
                     if (data.notification) {
                         const notifMsg = document.createElement('div');
                         notifMsg.className = 'ai-message';
-                        notifMsg.innerHTML = `<em>🛠️ ${data.notification}</em>`;
+                        notifMsg.innerHTML = `<em>🤖 ${data.notification}</em>`;
                         chatMessages.appendChild(notifMsg);
                     }
                     
                     const aiMsg = document.createElement('div');
                     aiMsg.className = 'ai-message';
-                    aiMsg.innerHTML = `✨ Content generated! You can view it in the canvas on the right. Use the <strong>Copy</strong> or <strong>Download</strong> buttons to save it.`;
+                    aiMsg.innerHTML = `🤖 Content generated! You can view it in the canvas on the right. Use the <strong>Copy</strong> or <strong>Download</strong> buttons to save it.`;
                     chatMessages.appendChild(aiMsg);
                     
                     const chatActions = document.createElement('div');

@@ -1,5 +1,6 @@
 import os
 import glob
+import time
 from google import genai
 
 RAG_REGISTRY = {
@@ -11,12 +12,34 @@ RAG_REGISTRY = {
     "data": "rag_data/Data-Real-Estate-Agent-001.md"
 }
 
+def generate_content_with_backoff(client, model, contents, config=None, max_retries=5, base_delay=1):
+    for attempt in range(max_retries):
+        try:
+            if config:
+                return client.models.generate_content(model=model, contents=contents, config=config)
+            else:
+                return client.models.generate_content(model=model, contents=contents)
+        except Exception as e:
+            is_503 = False
+            if hasattr(e, 'code') and e.code == 503:
+                is_503 = True
+            elif "503" in str(e) or "UNAVAILABLE" in str(e):
+                is_503 = True
+                
+            if is_503 and attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)
+                print(f"API 503 Error. Retrying in {delay} seconds... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(delay)
+            else:
+                raise
+
 def extract_role_from_input(user_input, api_key):
     """Fallback intent/role extraction if not provided directly."""
     try:
         client = genai.Client(api_key=api_key)
         extraction_prompt = f"Extract the target user role from this user request: '{user_input}'. Return only the role name in snake_case (e.g. data_scientist, mortgage_lender), or 'None' if no role is specified."
-        role_response = client.models.generate_content(
+        role_response = generate_content_with_backoff(
+            client=client,
             model='gemini-3-flash-preview',
             contents=extraction_prompt
         )
@@ -51,18 +74,30 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
             
         # Phase 2: Raw Data Ingestion (Conditional)
         if role and role != "none":
-            expected_rag_file = f"rag_data/Data-{role.replace('_', '-')}.md"
-            if not os.path.exists(expected_rag_file):
+            search_pattern = role.replace("_", "-").lower()
+            
+            found_rag_file = None
+            for file_path in glob.glob("rag_data/Data-*.md"):
+                filename = os.path.basename(file_path).lower()
+                if search_pattern in filename:
+                    found_rag_file = file_path
+                    break
+
+            if not found_rag_file:
+                expected_rag_file = f"rag_data/Data-{role.replace('_', '-').title()}.md"
                 expected_raw_file = f"raw_data/transcript_{role}.md"
                 if os.path.exists(expected_raw_file):
                     notification_message = f"I noticed we don't have structured data on {role.replace('_', ' ').title()}. I will now process the raw transcript and add it to our knowledge base. This may take a moment..."
-                    with open("rag_data/registry.md", 'r', encoding='utf-8') as f:
-                        registry_content = f.read()
+                    with open("rag_data/transcript_ingestion_prompt.md", 'r', encoding='utf-8') as f:
+                        ingestion_instructions = f.read()
+                    with open("rag_data/rag_template.md", 'r', encoding='utf-8') as f:
+                        rag_template = f.read()
                     with open(expected_raw_file, 'r', encoding='utf-8') as f:
                         raw_content = f.read()
                         
-                    ingestion_prompt = f"{registry_content}\n\n---\n\nRaw Transcript to process:\n{raw_content}"
-                    processed_response = client.models.generate_content(
+                    ingestion_prompt = f"{ingestion_instructions}\n\nSchema/Template:\n{rag_template}\n\n---\n\nRaw Transcript to process:\n{raw_content}"
+                    processed_response = generate_content_with_backoff(
+                        client=client,
                         model='gemini-3-flash-preview',
                         contents=ingestion_prompt
                     )
@@ -76,11 +111,12 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
                         return ai_response, notification_message, error_message, needs_web_search_permission
 
                     notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. I will perform a web-lookup to gather up-to-date information before proceeding."
-                    with open("rag_data/registry.md", 'r', encoding='utf-8') as f:
-                        registry_content = f.read()
+                    with open("rag_data/rag_template.md", 'r', encoding='utf-8') as f:
+                        rag_template = f.read()
                         
-                    synthetic_prompt = f"Perform a web-lookup to search for up-to-date information and industry insights regarding the role of a '{role.replace('_', ' ')}'. Using the results of this web-lookup, create highly detailed, realistic user interview insights. You MUST strictly follow the exact Markdown template and schema provided below. Do not output anything outside the schema.\n\nHere is the schema:\n\n{registry_content}"
-                    processed_response = client.models.generate_content(
+                    synthetic_prompt = f"Perform a web-lookup to search for up-to-date information and industry insights regarding the role of a '{role.replace('_', ' ')}'. Using the results of this web-lookup, create highly detailed, realistic user interview insights. You MUST strictly follow the exact Markdown template and schema provided below. Do not output anything outside the schema.\n\nHere is the schema:\n\n{rag_template}"
+                    processed_response = generate_content_with_backoff(
+                        client=client,
                         model='gemini-3-flash-preview',
                         contents=synthetic_prompt,
                         config={"tools": [{"google_search": {}}]}
@@ -112,12 +148,17 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
         else:
             combined_prompt = user_input
 
-        response = client.models.generate_content(
+        response = generate_content_with_backoff(
+            client=client,
             model='gemini-3-flash-preview',
             contents=combined_prompt,
             config={"tools": [{"google_search": {}}]}
         )
-        ai_response = response.text
+        ai_response = response.text.strip()
+        if ai_response.startswith("```"):
+            lines = ai_response.split('\n')
+            if lines[0].startswith("```") and lines[-1].strip() == "```":
+                ai_response = '\n'.join(lines[1:-1]).strip()
         
         if response.usage_metadata:
             print(f"Input Token Count: {response.usage_metadata.prompt_token_count}")
