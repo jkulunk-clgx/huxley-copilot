@@ -40,7 +40,7 @@ def extract_role_from_input(user_input, api_key):
         extraction_prompt = f"Extract the target user role from this user request: '{user_input}'. Return only the role name in snake_case (e.g. data_scientist, mortgage_lender), or 'None' if no role is specified."
         role_response = generate_content_with_backoff(
             client=client,
-            model='gemini-3-flash-preview',
+            model='gemini-3.5-flash',
             contents=extraction_prompt
         )
         return role_response.text.strip().lower()
@@ -98,7 +98,7 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
                     ingestion_prompt = f"{ingestion_instructions}\n\nSchema/Template:\n{rag_template}\n\n---\n\nRaw Transcript to process:\n{raw_content}"
                     processed_response = generate_content_with_backoff(
                         client=client,
-                        model='gemini-3-flash-preview',
+                        model='gemini-3.5-flash',
                         contents=ingestion_prompt
                     )
                     
@@ -117,7 +117,7 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
                     synthetic_prompt = f"Perform a web-lookup to search for up-to-date information and industry insights regarding the role of a '{role.replace('_', ' ')}'. Using the results of this web-lookup, create highly detailed, realistic user interview insights. You MUST strictly follow the exact Markdown template and schema provided below. Do not output anything outside the schema.\n\nHere is the schema:\n\n{rag_template}"
                     processed_response = generate_content_with_backoff(
                         client=client,
-                        model='gemini-3-flash-preview',
+                        model='gemini-3.5-flash',
                         contents=synthetic_prompt,
                         config={"tools": [{"google_search": {}}]}
                     )
@@ -150,7 +150,7 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
 
         response = generate_content_with_backoff(
             client=client,
-            model='gemini-3-flash-preview',
+            model='gemini-3.5-flash',
             contents=combined_prompt,
             config={"tools": [{"google_search": {}}]}
         )
