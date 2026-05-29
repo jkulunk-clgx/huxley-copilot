@@ -1,10 +1,11 @@
 import os
 import re
 import tempfile
+import glob
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from dotenv import load_dotenv
-from app.ai_service import generate_ai_response
+from app.ai_service import generate_ai_response, extract_role_from_input
 
 load_dotenv()
 
@@ -64,11 +65,19 @@ def process_message(user_input, user, channel_id, ts, client, say):
     
     if state_key in pending_confirmations:
         if user_input.lower().strip() in ["yes", "proceed", "y", "sure", "ok", "yeah"]:
-            original_input = pending_confirmations[state_key]
+            state_data = pending_confirmations[state_key]
+            if isinstance(state_data, dict):
+                original_input = state_data['user_input']
+                role = state_data.get('role')
+            else:
+                original_input = state_data
+                role = None
             del pending_confirmations[state_key]
             say(text=f"Hi <@{user}>, proceeding with the web search...", thread_ts=ts)
             api_key = os.environ.get("GEMINI_API_KEY")
-            ai_response, notification_message, error_message, _ = generate_ai_response(original_input, api_key=api_key, allow_web_search=True)
+            ai_response, notification_message, error_message, _ = generate_ai_response(original_input, role=role, api_key=api_key, allow_web_search=True)
+            if notification_message:
+                say(text=f"{notification_message}", thread_ts=ts)
         else:
             del pending_confirmations[state_key]
             say(text=f"Okay, request cancelled.", thread_ts=ts)
@@ -77,17 +86,53 @@ def process_message(user_input, user, channel_id, ts, client, say):
         say(text=f"Hi <@{user}>, I'm thinking about that...", thread_ts=ts)
         
         api_key = os.environ.get("GEMINI_API_KEY")
-        ai_response, notification_message, error_message, needs_permission = generate_ai_response(user_input, api_key=api_key, allow_web_search=False)
-        
-        if needs_permission:
-            pending_confirmations[state_key] = user_input
-    
+        if not api_key or api_key == "your_api_key_here":
+            say(text=f"Gemini API key is missing. Please set it in the .env file.", thread_ts=ts)
+            return
+            
+        try:
+            role = extract_role_from_input(user_input, api_key)
+            
+            notification_message = None
+            needs_permission = False
+            
+            if role and role != "none":
+                search_pattern = role.replace("_", "-").lower()
+                found_rag_file = None
+                for file_path in glob.glob("rag_data/Data-*.md"):
+                    if search_pattern in os.path.basename(file_path).lower():
+                        found_rag_file = file_path
+                        break
+                        
+                if not found_rag_file:
+                    expected_raw_file = f"raw_data/transcript_{role}.md"
+                    if os.path.exists(expected_raw_file):
+                        notification_message = f"I noticed we don't have structured data on {role.replace('_', ' ').title()}. I will now process the raw transcript and add it to our knowledge base. This may take a moment..."
+                    else:
+                        needs_permission = True
+                        notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. Should I proceed with an internet search? Please note that any data returned will not be validated. Reply 'yes' to proceed."
+                else:
+                    notification_message = f"I am referencing the existing data for {role.replace('_', ' ').title()} to generate this artifact."
+            
+            if notification_message:
+                say(text=f"{notification_message}", thread_ts=ts)
+                
+            if needs_permission:
+                pending_confirmations[state_key] = {'user_input': user_input, 'role': role}
+                return
+                
+            ai_response, post_notification, error_message, _ = generate_ai_response(user_input, role=role, api_key=api_key, allow_web_search=False)
+            
+            if post_notification and post_notification != notification_message:
+                say(text=f"{post_notification}", thread_ts=ts)
+                
+        except Exception as e:
+            error_message = f"An error occurred: {str(e)}"
+            ai_response = None
+            
     if error_message:
         say(text=f"Sorry, I ran into an error: {error_message}", thread_ts=ts)
         return
-        
-    if notification_message:
-        say(text=f"{notification_message}", thread_ts=ts)
         
     if ai_response:
         filename = get_filename_from_markdown(ai_response)

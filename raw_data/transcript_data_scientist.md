@@ -64,7 +64,7 @@ January 24, 2025, 9:33PM
 
 **John**   1:52  
  OK, OK, cool. Great, great.  
- Hey, Javier, he's our TPM for this initiative.  
+ Hey, Pablo, he's our TPM for this initiative.  
  So he's joining to help us with, you know, here in first hand.
 
 **Jimmy**   2:03  

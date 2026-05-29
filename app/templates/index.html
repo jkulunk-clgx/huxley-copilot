@@ -87,6 +87,11 @@
             letter-spacing: -0.3px;
         }
 
+        .header h1 .title-ux {
+            color: black;
+            -webkit-text-fill-color: black;
+        }
+
         /* ===========================
            MAIN LAYOUT
            A two-column flexbox layout. The left side holds the chat,
@@ -321,7 +326,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .loading-state {
@@ -567,7 +574,7 @@
          Top bar with the application name.
          =========================== -->
     <div class="header">
-        <h1>Huxley Copilot</h1>
+        <h1>H<span class="title-ux">ux</span>ley Copilot</h1>
     </div>
 
     <!-- ===========================
@@ -622,7 +629,8 @@
                         </svg>
                         Copy
                     </button>
-                    <button class="canvas-btn" id="download-btn" onclick="downloadPersona()" title="Download as Markdown">
+                    <button class="canvas-btn" id="download-btn" onclick="downloadPersona()"
+                        title="Download as Markdown">
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
                             <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5" />
                             <path d="M3 15v1.5A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V15" />
@@ -636,7 +644,7 @@
             <div class="canvas-content" id="persona-canvas" style="display: none;">
                 <!-- Markdown will be rendered here by marked.js -->
             </div>
-            
+
             <script id="raw-markdown" type="application/json">""</script>
         </div>
     </div>
@@ -654,33 +662,33 @@
     <script>
         let pendingWebSearch = null;
 
-        document.getElementById('chat-form').addEventListener('submit', function(e) {
+        document.getElementById('chat-form').addEventListener('submit', function (e) {
             e.preventDefault();
-            
+
             const textarea = document.getElementById('user_input');
             const userInput = textarea.value.trim();
             if (!userInput) return;
-            
+
             // 1. Update chat UI immediately
             document.getElementById('empty-state').style.display = 'none';
             const chatMessages = document.getElementById('chat-messages');
-            
+
             // Add user message
             const userMsg = document.createElement('div');
             userMsg.className = 'user-message';
             userMsg.textContent = userInput;
             chatMessages.appendChild(userMsg);
-            
+
             // Clear input
             textarea.value = '';
 
             const canvasPanel = document.getElementById('canvas-panel');
-            
+
             if (pendingWebSearch) {
                 if (["yes", "proceed", "y", "sure", "ok", "yeah"].includes(userInput.toLowerCase().trim())) {
                     const currentPending = pendingWebSearch;
                     pendingWebSearch = null;
-                    
+
                     const notifMsg = document.createElement('div');
                     notifMsg.className = 'ai-message';
                     notifMsg.innerHTML = `<em>🤖 Proceeding with web search...</em>`;
@@ -696,7 +704,7 @@
                     handleGenerationFetch(
                         fetch('/', {
                             method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ user_input: currentPending.userInput, role: currentPending.role, allow_web_search: true })
                         })
                     );
@@ -713,13 +721,13 @@
                     return;
                 }
             }
-            
+
             // 2. Open canvas and show loading
             canvasPanel.classList.add('active');
             document.getElementById('loading-state').style.display = 'flex';
             document.getElementById('canvas-toolbar').style.display = 'none';
             document.getElementById('persona-canvas').style.display = 'none';
-            
+
             // Scroll to bottom of chat
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -731,93 +739,93 @@
                 },
                 body: JSON.stringify({ user_input: userInput })
             })
-            .then(response => response.json())
-            .then(intentData => {
-                if (intentData.error_message) {
-                    throw new Error(intentData.error_message);
-                }
-                
-                // If the backend plans to process raw data, notify the user immediately
-                if (intentData.notification) {
-                    const notifMsg = document.createElement('div');
-                    notifMsg.className = 'ai-message';
-                    notifMsg.innerHTML = `<em>🤖 ${intentData.notification}</em>`;
-                    chatMessages.appendChild(notifMsg);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-                
-                if (intentData.needs_web_search_permission) {
-                    pendingWebSearch = { userInput: userInput, role: intentData.role };
+                .then(response => response.json())
+                .then(intentData => {
+                    if (intentData.error_message) {
+                        throw new Error(intentData.error_message);
+                    }
+
+                    // If the backend plans to process raw data, notify the user immediately
+                    if (intentData.notification) {
+                        const notifMsg = document.createElement('div');
+                        notifMsg.className = 'ai-message';
+                        notifMsg.innerHTML = `<em>🤖 ${intentData.notification}</em>`;
+                        chatMessages.appendChild(notifMsg);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+
+                    if (intentData.needs_web_search_permission) {
+                        pendingWebSearch = { userInput: userInput, role: intentData.role };
+                        document.getElementById('loading-state').style.display = 'none';
+                        canvasPanel.classList.remove('active');
+                        return; // Stop here, wait for next user input
+                    }
+
+                    // 4. Perform Phase 2 & 3: Generation
+                    handleGenerationFetch(
+                        fetch('/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ user_input: userInput, role: intentData.role })
+                        })
+                    );
+                })
+                .catch(err => {
                     document.getElementById('loading-state').style.display = 'none';
                     canvasPanel.classList.remove('active');
-                    return; // Stop here, wait for next user input
-                }
-                
-                // 4. Perform Phase 2 & 3: Generation
-                handleGenerationFetch(
-                    fetch('/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ user_input: userInput, role: intentData.role })
-                    })
-                );
-            })
-            .catch(err => {
-                document.getElementById('loading-state').style.display = 'none';
-                canvasPanel.classList.remove('active');
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'error-block';
-                errorMsg.innerHTML = `<strong>Error:</strong> ${err.message || 'An unexpected error occurred.'}`;
-                chatMessages.appendChild(errorMsg);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            });
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'error-block';
+                    errorMsg.innerHTML = `<strong>Error:</strong> ${err.message || 'An unexpected error occurred.'}`;
+                    chatMessages.appendChild(errorMsg);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                });
         });
 
         function handleGenerationFetch(fetchPromise) {
             const chatMessages = document.getElementById('chat-messages');
             fetchPromise
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Hide loading state
-                document.getElementById('loading-state').style.display = 'none';
-                
-                if (data.error_message) {
-                    const errorMsg = document.createElement('div');
-                    errorMsg.className = 'error-block';
-                    errorMsg.innerHTML = `<strong>Error:</strong> ${data.error_message}`;
-                    chatMessages.appendChild(errorMsg);
-                    document.getElementById('canvas-panel').classList.remove('active');
-                } else {
-                    // Update canvas with results
-                    document.getElementById('raw-markdown').textContent = JSON.stringify(data.ai_response);
-                    document.getElementById('persona-canvas').innerHTML = marked.parse(data.ai_response);
-                    
-                    document.getElementById('canvas-toolbar').style.display = 'flex';
-                    document.getElementById('persona-canvas').style.display = 'block';
-                    
-                    // Add AI confirmation to chat
-                    if (data.notification) {
-                        const notifMsg = document.createElement('div');
-                        notifMsg.className = 'ai-message';
-                        notifMsg.innerHTML = `<em>🤖 ${data.notification}</em>`;
-                        chatMessages.appendChild(notifMsg);
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    
-                    const aiMsg = document.createElement('div');
-                    aiMsg.className = 'ai-message';
-                    aiMsg.innerHTML = `🤖 Content generated! You can view it in the canvas on the right. Use the <strong>Copy</strong> or <strong>Download</strong> buttons to save it.`;
-                    chatMessages.appendChild(aiMsg);
-                    
-                    const chatActions = document.createElement('div');
-                    chatActions.className = 'chat-actions';
-                    chatActions.innerHTML = `
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading state
+                    document.getElementById('loading-state').style.display = 'none';
+
+                    if (data.error_message) {
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'error-block';
+                        errorMsg.innerHTML = `<strong>Error:</strong> ${data.error_message}`;
+                        chatMessages.appendChild(errorMsg);
+                        document.getElementById('canvas-panel').classList.remove('active');
+                    } else {
+                        // Update canvas with results
+                        document.getElementById('raw-markdown').textContent = JSON.stringify(data.ai_response);
+                        document.getElementById('persona-canvas').innerHTML = marked.parse(data.ai_response);
+
+                        document.getElementById('canvas-toolbar').style.display = 'flex';
+                        document.getElementById('persona-canvas').style.display = 'block';
+
+                        // Add AI confirmation to chat
+                        if (data.notification) {
+                            const notifMsg = document.createElement('div');
+                            notifMsg.className = 'ai-message';
+                            notifMsg.innerHTML = `<em>🤖 ${data.notification}</em>`;
+                            chatMessages.appendChild(notifMsg);
+                        }
+
+                        const aiMsg = document.createElement('div');
+                        aiMsg.className = 'ai-message';
+                        aiMsg.innerHTML = `🤖 Content generated! You can view it in the canvas on the right. Use the <strong>Copy</strong> or <strong>Download</strong> buttons to save it.`;
+                        chatMessages.appendChild(aiMsg);
+
+                        const chatActions = document.createElement('div');
+                        chatActions.className = 'chat-actions';
+                        chatActions.innerHTML = `
                         <a href="/" class="btn-secondary">
                             <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
                                 <path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311V15a.75.75 0 01-1.5 0v-3.5a.75.75 0 01.75-.75H8.5a.75.75 0 010 1.5H7.058l.263.262a4 4 0 006.693-1.796.75.75 0 011.298.762zM4.688 8.576a5.5 5.5 0 019.201-2.466l.312.311V5a.75.75 0 011.5 0v3.5a.75.75 0 01-.75.75H11.5a.75.75 0 010-1.5h1.442l-.263-.262a4 4 0 00-6.693 1.796.75.75 0 01-1.298-.762z" clip-rule="evenodd" />
@@ -825,20 +833,20 @@
                             New Chat
                         </a>
                     `;
-                    chatMessages.appendChild(chatActions);
-                }
-                
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            })
-            .catch(err => {
-                document.getElementById('loading-state').style.display = 'none';
-                document.getElementById('canvas-panel').classList.remove('active');
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'error-block';
-                errorMsg.innerHTML = `<strong>Error:</strong> ${err.message || 'An unexpected error occurred.'}`;
-                chatMessages.appendChild(errorMsg);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            });
+                        chatMessages.appendChild(chatActions);
+                    }
+
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                })
+                .catch(err => {
+                    document.getElementById('loading-state').style.display = 'none';
+                    document.getElementById('canvas-panel').classList.remove('active');
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'error-block';
+                    errorMsg.innerHTML = `<strong>Error:</strong> ${err.message || 'An unexpected error occurred.'}`;
+                    chatMessages.appendChild(errorMsg);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                });
         }
 
         // ===========================
@@ -902,7 +910,7 @@
                 title = title.toLowerCase().replace(/[^a-z0-9-]/g, '');
                 // Remove consecutive hyphens and trailing/leading hyphens
                 title = title.replace(/-+/g, '-').replace(/^-|-$/g, '');
-                
+
                 if (title) {
                     filename = `${title}.md`;
                 }

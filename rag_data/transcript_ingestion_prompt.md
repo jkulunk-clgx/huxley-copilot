@@ -10,6 +10,6 @@ _To process a new interview transcript, apply the following system instructions 
     
 2. **Be comprehensive:** Do not summarize to the point of losing critical nuances, software names, or specific workflows.
     
-3. **Use the Exact Schema:** You must map the transcript data strictly to the headers and frontmatter provided in the template below.
+3. **Use the Exact Schema:** You must map the transcript data strictly to the headers and frontmatter provided in `rag_template.md`.
     
 4. **Identify Gaps:** If a section's topic was not discussed in the interview, include the header but note "N/A - Not discussed in this interview."
