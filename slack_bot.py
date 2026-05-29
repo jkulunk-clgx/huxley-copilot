@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -43,6 +44,20 @@ def handle_message_events(body, say, client):
 
 pending_confirmations = {}
 
+def get_filename_from_markdown(markdown_text):
+    filename = 'download.md'
+    match = re.search(r'^#{1,4}\s+(.+)$', markdown_text, re.MULTILINE)
+    if match:
+        title = match.group(1).strip()
+        words = title.split()[:5]
+        title = '-'.join(words)
+        title = title.lower()
+        title = re.sub(r'[^a-z0-9-]', '', title)
+        title = re.sub(r'-+', '-', title).strip('-')
+        if title:
+            filename = f"{title}.md"
+    return filename
+
 def process_message(user_input, user, channel_id, ts, client, say):
     global pending_confirmations
     state_key = f"{channel_id}_{user}"
@@ -75,8 +90,10 @@ def process_message(user_input, user, channel_id, ts, client, say):
         say(text=f"{notification_message}", thread_ts=ts)
         
     if ai_response:
+        filename = get_filename_from_markdown(ai_response)
+        
         # Create a temporary markdown file to upload
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.md', prefix='response_') as temp_file:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.md') as temp_file:
             temp_file.write(ai_response)
             temp_file_path = temp_file.name
             
@@ -86,7 +103,8 @@ def process_message(user_input, user, channel_id, ts, client, say):
                 channel=channel_id,
                 thread_ts=ts,
                 file=temp_file_path,
-                title="Huxley Response",
+                filename=filename,
+                title=filename.replace('.md', '').replace('-', ' ').title(),
                 initial_comment=f"Here is your generated response, <@{user}>!"
             )
         except Exception as e:
