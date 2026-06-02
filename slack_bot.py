@@ -73,17 +73,24 @@ def process_message(user_input, user, channel_id, ts, client, say):
                 original_input = state_data
                 role = None
             del pending_confirmations[state_key]
-            say(text=f"Hi <@{user}>, proceeding with the web search...", thread_ts=ts)
+            
+            def slack_notify_confirm(msg):
+                say(text=msg, thread_ts=ts)
+                
+            slack_notify_confirm(f"Hi <@{user}>, proceeding with the web search...")
             api_key = os.environ.get("GEMINI_API_KEY")
-            ai_response, notification_message, error_message, _ = generate_ai_response(original_input, role=role, api_key=api_key, allow_web_search=True)
-            if notification_message:
-                say(text=f"{notification_message}", thread_ts=ts)
+            ai_response, notification_message, error_message, _ = generate_ai_response(
+                original_input, role=role, api_key=api_key, allow_web_search=True, notify_callback=slack_notify_confirm
+            )
         else:
             del pending_confirmations[state_key]
             say(text=f"Okay, request cancelled.", thread_ts=ts)
             return
     else:
-        say(text=f"Hi <@{user}>, I'm thinking about that...", thread_ts=ts)
+        def slack_notify(msg):
+            say(text=msg, thread_ts=ts)
+            
+        slack_notify(f"Hi <@{user}>, I'm thinking about that...")
         
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key or api_key == "your_api_key_here":
@@ -106,25 +113,18 @@ def process_message(user_input, user, channel_id, ts, client, say):
                         
                 if not found_rag_file:
                     expected_raw_file = f"raw_data/transcript_{role}.md"
-                    if os.path.exists(expected_raw_file):
-                        notification_message = f"I noticed we don't have structured data on {role.replace('_', ' ').title()}. I will now process the raw transcript and add it to our knowledge base. This may take a moment..."
-                    else:
+                    if not os.path.exists(expected_raw_file):
                         needs_permission = True
                         notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. Should I proceed with an internet search? Please note that any data returned will not be validated. Reply 'yes' to proceed."
-                else:
-                    notification_message = f"I am referencing the existing data for {role.replace('_', ' ').title()} to generate this artifact."
             
-            if notification_message:
-                say(text=f"{notification_message}", thread_ts=ts)
-                
             if needs_permission:
+                say(text=f"{notification_message}", thread_ts=ts)
                 pending_confirmations[state_key] = {'user_input': user_input, 'role': role}
                 return
                 
-            ai_response, post_notification, error_message, _ = generate_ai_response(user_input, role=role, api_key=api_key, allow_web_search=False)
-            
-            if post_notification and post_notification != notification_message:
-                say(text=f"{post_notification}", thread_ts=ts)
+            ai_response, _, error_message, _ = generate_ai_response(
+                user_input, role=role, api_key=api_key, allow_web_search=False, notify_callback=slack_notify
+            )
                 
         except Exception as e:
             error_message = f"An error occurred: {str(e)}"

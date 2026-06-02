@@ -48,7 +48,7 @@ def extract_role_from_input(user_input, api_key):
         print(f"Error extracting role: {e}")
         return "none"
 
-def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=False):
+def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=False, notify_callback=None):
     """
     Core logic for generating AI response. 
     Handles intent extraction, raw data ingestion, and artifact generation.
@@ -70,7 +70,10 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
         
         # Phase 1: Intent & Role Extraction (Fallback)
         if not role:
+            if notify_callback: notify_callback("Analyzing request to extract target user role...")
             role = extract_role_from_input(user_input, api_key)
+            if notify_callback and role and role != "none":
+                notify_callback(f"Identified target user role: {role.replace('_', ' ').title()}")
             
         # Phase 2: Raw Data Ingestion (Conditional)
         if role and role != "none":
@@ -88,6 +91,7 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
                 expected_raw_file = f"raw_data/transcript_{role}.md"
                 if os.path.exists(expected_raw_file):
                     notification_message = f"I noticed we don't have structured data on {role.replace('_', ' ').title()}. I will now process the raw transcript and add it to our knowledge base. This may take a moment..."
+                    if notify_callback: notify_callback(notification_message)
                     with open("rag_data/transcript_ingestion_prompt.md", 'r', encoding='utf-8') as f:
                         ingestion_instructions = f.read()
                     with open("rag_data/rag_template.md", 'r', encoding='utf-8') as f:
@@ -104,13 +108,16 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
                     
                     with open(expected_rag_file, 'w', encoding='utf-8') as f:
                         f.write(processed_response.text)
+                    if notify_callback: notify_callback(f"Raw transcript processed and knowledge base updated.")
                 else:
                     if not allow_web_search:
                         needs_web_search_permission = True
                         notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. Should I proceed with an internet search? Please note that any data returned will not be validated. Reply 'yes' to proceed."
+                        if notify_callback: notify_callback(notification_message)
                         return ai_response, notification_message, error_message, needs_web_search_permission
 
                     notification_message = f"I couldn't find any real data for {role.replace('_', ' ').title()}. I will perform a web-lookup to gather up-to-date information before proceeding."
+                    if notify_callback: notify_callback(notification_message)
                     with open("rag_data/rag_template.md", 'r', encoding='utf-8') as f:
                         rag_template = f.read()
                         
@@ -126,8 +133,10 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
                     
                     with open(expected_rag_file, 'w', encoding='utf-8') as f:
                         f.write(warning_banner + processed_response.text)
+                    if notify_callback: notify_callback(f"Web-lookup complete and synthetic data added to knowledge base.")
             else:
-                notification_message = f"Synthesizing the final artifact using the validated data for {role.replace('_', ' ').title()}..."
+                notification_message = f"I am referencing the existing data for {role.replace('_', ' ').title()} to generate this artifact."
+                if notify_callback: notify_callback(notification_message)
 
         # Phase 3: Artifact Generation & Fulfillment
         rag_contexts = []
@@ -147,6 +156,13 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
             combined_prompt = f"Context from RAG files:\n{rag_context}\n\nUser Request:\n{user_input}"
         else:
             combined_prompt = user_input
+
+        if rag_context:
+            combined_prompt = f"Context from RAG files:\n{rag_context}\n\nUser Request:\n{user_input}"
+        else:
+            combined_prompt = user_input
+
+        if notify_callback: notify_callback(f"Synthesizing the final artifact...")
 
         response = generate_content_with_backoff(
             client=client,
