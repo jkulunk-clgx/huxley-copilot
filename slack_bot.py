@@ -18,7 +18,7 @@ def handle_app_mention_events(body, say, client):
     user = event.get("user")
     text = event.get("text", "")
     channel_id = event.get("channel")
-    ts = event.get("ts")
+    ts = event.get("thread_ts", event.get("ts"))
     
     # Strip the mention from the text
     # text looks like "<@U123456> I need a persona"
@@ -34,14 +34,17 @@ def handle_message_events(body, say, client):
     event = body.get("event", {})
     channel_type = event.get("channel_type")
     
-    # Only respond to direct messages here, app_mention handles channels
-    if channel_type == "im" and not event.get("bot_id"):
-        user_input = event.get("text", "").strip()
-        user = event.get("user")
-        channel_id = event.get("channel")
-        ts = event.get("ts")
-        
-        process_message(user_input, user, channel_id, ts, client, say)
+    user = event.get("user")
+    channel_id = event.get("channel")
+    state_key = f"{channel_id}_{user}"
+    
+    # Respond to direct messages, OR if the user has a pending confirmation in this channel
+    if not event.get("bot_id"):
+        if channel_type == "im" or state_key in pending_confirmations:
+            user_input = event.get("text", "").strip()
+            ts = event.get("thread_ts", event.get("ts"))
+            
+            process_message(user_input, user, channel_id, ts, client, say)
 
 pending_confirmations = {}
 

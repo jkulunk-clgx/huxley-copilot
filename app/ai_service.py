@@ -121,7 +121,7 @@ def generate_ai_response(user_input, role=None, api_key=None, allow_web_search=F
                     with open("rag_data/rag_template.md", 'r', encoding='utf-8') as f:
                         rag_template = f.read()
                         
-                    synthetic_prompt = f"Perform a web-lookup to search for up-to-date information and industry insights regarding the role of a '{role.replace('_', ' ')}'. Using the results of this web-lookup, create highly detailed, realistic user interview insights. You MUST strictly follow the exact Markdown template and schema provided below. Do not output anything outside the schema.\n\nHere is the schema:\n\n{rag_template}"
+                    synthetic_prompt = f"Perform a web-lookup to search for up-to-date information and industry insights regarding the role of a '{role.replace('_', ' ')}'. Using the results of this web-lookup, create highly detailed, realistic user interview insights. You MUST strictly follow the exact Markdown template and schema provided below. IMPORTANT: The schema contains placeholder examples for a real estate context (e.g., CoreLogic, Matrix, transactions). You MUST adapt these sections to fit the ACTUAL context of a '{role.replace('_', ' ')}'. Do not force real estate concepts if the role is unrelated. Adapt the technology stack, daily workflow, pain points, and business metrics to make sense for the requested role. Do not output anything outside the schema.\n\nHere is the schema:\n\n{rag_template}"
                     processed_response = generate_content_with_backoff(
                         client=client,
                         model='gemini-3.5-flash',
